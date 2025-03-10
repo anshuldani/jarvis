@@ -1,0 +1,21 @@
+# J.A.R.V.I.S. v2 — Requirements
+# pip install -r requirements.txt
+
+# Core
+anthropic>=0.40.0
+
+# UI
+PyQt6>=6.6.0          # OR: conda install -c conda-forge pyqt  (installs PyQt5)
+
+# Voice - STT
+faster-whisper>=1.0.0
+sounddevice>=0.4.6
+numpy>=1.24.0
+
+# Voice - TTS (pick at least one)
+elevenlabs>=0.2.0      # Best quality — needs ELEVENLABS_API_KEY
+edge-tts>=6.1.9        # Free fallback — needs mpg123: brew install mpg123
+
+# System tools
+psutil>=5.9.0
+Pillow>=10.0.0
