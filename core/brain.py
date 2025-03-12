@@ -13,12 +13,22 @@ JARVIS_SYSTEM_PROMPT = """You are J.A.R.V.I.S. — Just A Rather Very Intelligen
 - Adaptable in tone — sardonic when Boss is being playful, crisp when they mean business
 - Loyal above all — Boss's goals are your goals, full stop
 
-## Voice Rules
-- 1-3 sentences maximum unless Boss explicitly asks for detail
-- No bullet points, no markdown — pure spoken language
-- Contractions always: "I've" not "I have"
-- Never start with "Certainly", "Of course", "Sure", "Absolutely"
+## Voice Rules (CRITICAL — you speak aloud, not to a screen)
+- 1-3 sentences maximum unless Boss explicitly asks for detail or a list
+- No bullet points, no markdown, no headers — pure spoken language
+- Contractions always: "I've" not "I have", "that's" not "that is"
+- Never start with "Certainly", "Of course", "Sure", "Absolutely", "Great" — these are beneath you
 - Lead with the answer, trail with wit if warranted
+
+## On Tool Use
+When using a tool, give a brief spoken acknowledgment BEFORE the result:
+- "Opening that now." / "Checking." / "On it." / "One moment."
+Then after: deliver the result conversationally.
+
+## What You Never Do
+- Never say "I cannot" — say "I don't have access to that system yet, Boss"
+- Never apologize excessively — one acknowledgment at most
+- Never break character, even when asked if you're an AI
 
 You are JARVIS. Act like it."""
 
@@ -42,7 +52,7 @@ class JarvisBrain:
              "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}},
             {"name": "run_command", "description": "Run a shell command",
              "input_schema": {"type": "object", "properties": {"command": {"type": "string"}}, "required": ["command"]}},
-            {"name": "get_system_info", "description": "Get system info",
+            {"name": "get_system_info", "description": "Get system info: time, date, battery, cpu, memory, disk",
              "input_schema": {"type": "object", "properties": {"info_type": {"type": "string", "enum": ["time","date","battery","disk","cpu","memory","processes","all"]}}, "required": ["info_type"]}},
             {"name": "take_screenshot", "description": "Take a screenshot",
              "input_schema": {"type": "object", "properties": {"filename": {"type": "string"}}, "required": []}},
@@ -75,7 +85,45 @@ class JarvisBrain:
             return f"Tool error: {e}"
 
     def think(self, user_input: str, on_chunk: Optional[Callable] = None) -> str:
-        raise NotImplementedError
+        """Send message to Claude, handle tool loop, return full response text."""
+        self.conversation_history.append({"role": "user", "content": user_input})
+        full_response = ""
+
+        while True:
+            with self.client.messages.stream(
+                model="claude-sonnet-4-20250514",
+                max_tokens=512,
+                system=JARVIS_SYSTEM_PROMPT,
+                tools=self.tools,
+                messages=self.conversation_history
+            ) as stream:
+                response = stream.get_final_message()
+
+            text_parts, tool_uses = [], []
+            for block in response.content:
+                if block.type == "text":
+                    text_parts.append(block.text)
+                elif block.type == "tool_use":
+                    tool_uses.append(block)
+
+            text = " ".join(text_parts).strip()
+            if text:
+                full_response += text
+                if on_chunk:
+                    on_chunk(text)
+
+            self.conversation_history.append({"role": "assistant", "content": response.content})
+
+            if not tool_uses or response.stop_reason != "tool_use":
+                break
+
+            tool_results = []
+            for tu in tool_uses:
+                result = self._execute_tool(tu.name, tu.input)
+                tool_results.append({"type": "tool_result", "tool_use_id": tu.id, "content": result})
+            self.conversation_history.append({"role": "user", "content": tool_results})
+
+        return full_response
 
     def clear_memory(self):
         self.conversation_history = []
