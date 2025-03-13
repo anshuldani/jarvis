@@ -121,3 +121,49 @@ class SystemTools:
             return "Command timed out after 30 seconds, Boss."
         except Exception as e:
             return f"Command failed: {e}"
+
+    def get_system_info(self, info_type: str) -> str:
+        """Get system information"""
+        import psutil
+        now = datetime.datetime.now()
+        results = {}
+        if info_type in ("time", "all"):
+            results["time"] = now.strftime("%I:%M %p")
+        if info_type in ("date", "all"):
+            results["date"] = now.strftime("%A, %B %d, %Y")
+        if info_type in ("battery", "all"):
+            try:
+                bat = psutil.sensors_battery()
+                if bat:
+                    status = "charging" if bat.power_plugged else "discharging"
+                    results["battery"] = f"{bat.percent:.0f}% ({status})"
+                else:
+                    results["battery"] = "No battery detected (desktop)"
+            except Exception:
+                results["battery"] = "Battery info unavailable"
+        if info_type in ("cpu", "all"):
+            try:
+                results["cpu"] = f"{psutil.cpu_percent(interval=0.5):.1f}% usage"
+            except Exception:
+                results["cpu"] = "CPU info unavailable"
+        if info_type in ("memory", "all"):
+            try:
+                mem = psutil.virtual_memory()
+                results["memory"] = f"{mem.percent:.1f}% used ({mem.used//(1024**3):.1f}GB / {mem.total//(1024**3):.1f}GB)"
+            except Exception:
+                results["memory"] = "Memory info unavailable"
+        if info_type in ("disk", "all"):
+            try:
+                disk = psutil.disk_usage('/')
+                results["disk"] = f"{disk.percent:.1f}% used ({disk.used//(1024**3):.1f}GB / {disk.total//(1024**3):.1f}GB)"
+            except Exception:
+                results["disk"] = "Disk info unavailable"
+        if info_type in ("processes", "all"):
+            try:
+                procs = [(p.info['pid'], p.info['name']) for p in psutil.process_iter(['pid','name']) if p.info['name']][:20]
+                results["processes"] = ", ".join([f"{n}({pid})" for pid, n in procs])
+            except Exception:
+                results["processes"] = "Process list unavailable"
+        if not results:
+            return f"Unknown info type: {info_type}"
+        return json.dumps(results, indent=2) if info_type == "all" else list(results.values())[0]
