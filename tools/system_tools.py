@@ -167,3 +167,49 @@ class SystemTools:
         if not results:
             return f"Unknown info type: {info_type}"
         return json.dumps(results, indent=2) if info_type == "all" else list(results.values())[0]
+
+    def take_screenshot(self, filename: Optional[str] = None) -> str:
+        """Take a screenshot"""
+        try:
+            from PIL import ImageGrab
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = os.path.join(self.screenshot_dir, f"{filename or 'screenshot'}_{timestamp}.png")
+            ImageGrab.grab().save(path)
+            return f"Screenshot saved to {path}"
+        except ImportError:
+            try:
+                import datetime as dt
+                timestamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+                path = os.path.join(self.screenshot_dir, f"screenshot_{timestamp}.png")
+                subprocess.run(["scrot", path], check=True)
+                return f"Screenshot saved to {path}"
+            except Exception:
+                return "Screenshot unavailable. Install Pillow: pip install Pillow"
+        except Exception as e:
+            return f"Screenshot failed: {e}"
+
+    def list_directory(self, path: str) -> str:
+        """List directory contents"""
+        path = os.path.expanduser(path)
+        try:
+            entries = os.listdir(path)
+            dirs = sorted([e for e in entries if os.path.isdir(os.path.join(path, e))])
+            files = sorted([e for e in entries if os.path.isfile(os.path.join(path, e))])
+            result = f"Directory: {path}\n"
+            if dirs:  result += f"Folders ({len(dirs)}): {', '.join(dirs[:20])}\n"
+            if files: result += f"Files ({len(files)}): {', '.join(files[:20])}"
+            return result
+        except Exception as e:
+            return f"Cannot list directory: {e}"
+
+    def set_volume(self, level: int) -> str:
+        """Set system volume 0-100"""
+        level = max(0, min(100, level))
+        try:
+            if self.system == "Darwin":
+                subprocess.run(["osascript", "-e", f"set volume output volume {level}"])
+            elif self.system == "Linux":
+                subprocess.run(["amixer", "-q", "sset", "Master", f"{level}%"])
+            return f"Volume set to {level}%, Boss."
+        except Exception as e:
+            return f"Volume control unavailable: {e}"
