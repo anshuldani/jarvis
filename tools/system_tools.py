@@ -103,3 +103,21 @@ class SystemTools:
             return f"File written: {path}"
         except Exception as e:
             return f"Error writing file: {e}"
+
+    def run_command(self, command: str) -> str:
+        """Run a shell command safely"""
+        dangerous = ["rm -rf /", "mkfs", "dd if=/dev/zero", ":(){:|:&};:"]
+        for danger in dangerous:
+            if danger in command:
+                return "I won't execute that command, Boss. It's too destructive."
+        try:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=30)
+            output = result.stdout.strip()
+            error = result.stderr.strip()
+            if output and error:
+                return f"Output:\n{output}\n\nErrors:\n{error}"
+            return output or error or "Command executed successfully, Boss."
+        except subprocess.TimeoutExpired:
+            return "Command timed out after 30 seconds, Boss."
+        except Exception as e:
+            return f"Command failed: {e}"
