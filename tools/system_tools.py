@@ -78,3 +78,28 @@ class SystemTools:
 
     def set_volume(self, level: int) -> str:
         raise NotImplementedError
+
+    def read_file(self, path: str) -> str:
+        """Read file contents"""
+        path = os.path.expanduser(path)
+        try:
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+            if len(content) > 4000:
+                return content[:4000] + f"\n\n[...truncated. {len(content)} chars total]"
+            return content
+        except FileNotFoundError:
+            return f"File not found: {path}"
+        except Exception as e:
+            return f"Error reading file: {e}"
+
+    def write_file(self, path: str, content: str) -> str:
+        """Write content to file"""
+        path = os.path.expanduser(path)
+        try:
+            os.makedirs(os.path.dirname(path) if os.path.dirname(path) else '.', exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return f"File written: {path}"
+        except Exception as e:
+            return f"Error writing file: {e}"
