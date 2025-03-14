@@ -213,3 +213,29 @@ class SystemTools:
             return f"Volume set to {level}%, Boss."
         except Exception as e:
             return f"Volume control unavailable: {e}"
+
+    def get_weather(self, location: str = "") -> str:
+        """Get current weather using wttr.in (no API key needed)"""
+        import urllib.request, urllib.parse
+        try:
+            loc = urllib.parse.quote(location.strip()) if location.strip() else ""
+            url = f"https://wttr.in/{loc}?format=j1"
+            req = urllib.request.Request(url, headers={"User-Agent": "JARVIS/2.0"})
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode())
+            curr = data["current_condition"][0]
+            temp_f = curr["temp_F"]; temp_c = curr["temp_C"]
+            feels_f = curr["FeelsLikeF"]
+            desc = curr["weatherDesc"][0]["value"]
+            humidity = curr["humidity"]; wind_mph = curr["windspeedMiles"]
+            area = data.get("nearest_area", [{}])[0]
+            city = area.get("areaName", [{}])[0].get("value", "")
+            country = area.get("country", [{}])[0].get("value", "")
+            loc_str = f"{city}, {country}".strip(", ") if city else "your location"
+            today = data.get("weather", [{}])[0]
+            min_f = today.get("mintempF", "?"); max_f = today.get("maxtempF", "?")
+            return (f"Weather for {loc_str}: {desc}. Currently {temp_f}°F ({temp_c}°C), "
+                    f"feels like {feels_f}°F. Today's range: {min_f}–{max_f}°F. "
+                    f"Humidity {humidity}%, wind {wind_mph} mph.")
+        except Exception as e:
+            return f"Weather unavailable: {e}"
