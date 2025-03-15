@@ -10,18 +10,14 @@ from typing import Callable, Optional
 def _detect_tts():
     if os.environ.get("ELEVENLABS_API_KEY", ""):
         try:
-            import elevenlabs
-            return "elevenlabs"
-        except ImportError:
-            pass
+            import elevenlabs; return "elevenlabs"
+        except ImportError: pass
     try:
         import edge_tts; return "edge_tts"
-    except ImportError:
-        pass
+    except ImportError: pass
     try:
         import pyttsx3; return "pyttsx3"
-    except ImportError:
-        pass
+    except ImportError: pass
     return "system"
 
 
@@ -36,8 +32,7 @@ def _play_pcm(pcm_bytes: bytes, sample_rate=22050, on_rms: Optional[Callable] = 
     try:
         import sounddevice as sd
         arr = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-        if on_rms and len(arr) > 0:
-            on_rms(float(np.sqrt(np.mean(arr**2))))
+        if on_rms and len(arr) > 0: on_rms(float(np.sqrt(np.mean(arr**2))))
         sd.play(arr, sample_rate); sd.wait()
     except Exception as e:
         print(f"[JARVIS audio] PCM playback failed: {e}")
@@ -66,12 +61,14 @@ class AudioEngine:
                 from faster_whisper import WhisperModel
                 print(f"[JARVIS] Loading Whisper ({model_name})...")
                 self._whisper = ("faster", WhisperModel(model_name, device="cpu", compute_type="int8"))
+                print("[JARVIS] Whisper ready.")
             except ImportError:
                 try:
                     import whisper
                     self._whisper = ("openai", whisper.load_model(model_name))
                 except ImportError:
                     self._whisper = ("none", None)
+                    print("[JARVIS] No Whisper found — using SpeechRecognition fallback")
         return self._whisper
 
     def _transcribe(self, audio: np.ndarray, sr=16000) -> str:
@@ -94,28 +91,21 @@ class AudioEngine:
             except: pass
 
     def record_and_process(self):
-        """Record from microphone until silence, transcribe, and respond."""
         def _run():
             try:
                 import sounddevice as sd
                 SR, CHUNK = 16000, 1024
-                SILENCE_RMS  = 0.01
-                SILENCE_SECS = 1.5
-                SPEECH_RMS   = 0.015
+                SILENCE_RMS = 0.01; SILENCE_SECS = 1.5; SPEECH_RMS = 0.015
                 silence_limit = int(SILENCE_SECS * SR / CHUNK)
-
                 self.is_listening = True
                 if self.on_listening_start: self.on_listening_start()
-
                 chunks, silence_n, started = [], 0, False
                 t0 = time.time()
-
                 with sd.InputStream(samplerate=SR, channels=1, dtype="float32", blocksize=CHUNK) as stream:
                     while self.is_listening and (time.time() - t0) < 30:
                         data, _ = stream.read(CHUNK)
                         rms = float(np.sqrt(np.mean(data**2)))
-                        if self.on_audio_level:
-                            self.on_audio_level(min(rms * 8, 1.0))
+                        if self.on_audio_level: self.on_audio_level(min(rms * 8, 1.0))
                         if not started:
                             if rms > SPEECH_RMS: started = True
                             elif time.time() - t0 > 8: break
@@ -123,30 +113,24 @@ class AudioEngine:
                         chunks.append(data.copy())
                         silence_n = (silence_n + 1) if rms < SILENCE_RMS else 0
                         if silence_n >= silence_limit: break
-
                 self.is_listening = False
                 if self.on_listening_stop: self.on_listening_stop()
                 if self.on_audio_level: self.on_audio_level(0.0)
-
                 if not chunks: return
                 audio = np.concatenate(chunks).flatten()
-                text  = self._transcribe(audio, SR)
+                text = self._transcribe(audio, SR)
                 if not text.strip(): return
-
                 print(f"[BOSS]: {text}")
                 if self.on_transcription: self.on_transcription(text)
-
                 response = self.brain.think(text, on_chunk=self.on_response_ready)
                 print(f"[JARVIS]: {response}")
                 self.speak(response)
-
             except ImportError:
                 if self.on_error: self.on_error("sounddevice not installed. Run: pip install sounddevice")
             except Exception as e:
                 self.is_listening = False
                 if self.on_listening_stop: self.on_listening_stop()
                 if self.on_error: self.on_error(str(e))
-
         threading.Thread(target=_run, daemon=True).start()
 
     def process_text(self, text: str):
@@ -158,7 +142,35 @@ class AudioEngine:
         threading.Thread(target=_run, daemon=True).start()
 
     def speak(self, text: str):
-        raise NotImplementedError
+        if not text.strip(): return
+        def _run():
+            self.is_speaking = True
+            if self.on_speaking_start: self.on_speaking_start(text)
+            try:
+                if self._tts == "elevenlabs": self._speak_elevenlabs(text)
+                elif self._tts == "edge_tts": self._speak_edge(text)
+                elif self._tts == "pyttsx3":  self._speak_pyttsx3(text)
+                else:                         self._speak_system(text)
+            except Exception as e:
+                print(f"[JARVIS TTS] {e} — falling back to print")
+                print(f"[JARVIS]: {text}")
+            finally:
+                self.is_speaking = False
+                if self.on_speaking_stop: self.on_speaking_stop()
+                if self.on_audio_level: self.on_audio_level(0.0)
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _speak_elevenlabs(self, text: str):
+        raise NotImplementedError("elevenlabs not yet implemented")
+
+    def _speak_edge(self, text: str):
+        raise NotImplementedError("edge-tts not yet implemented")
+
+    def _speak_pyttsx3(self, text: str):
+        raise NotImplementedError("pyttsx3 not yet implemented")
+
+    def _speak_system(self, text: str):
+        raise NotImplementedError("system TTS not yet implemented")
 
     def stop(self):
         self.is_listening = False
