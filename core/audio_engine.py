@@ -1,5 +1,6 @@
 """
 AudioEngine — ElevenLabs TTS (primary) + Whisper STT
+Streams audio chunks for low latency, feeds RMS back to UI waveform
 """
 import os, time, threading, tempfile, subprocess, asyncio
 import numpy as np
@@ -14,13 +15,11 @@ def _detect_tts():
         except ImportError:
             pass
     try:
-        import edge_tts
-        return "edge_tts"
+        import edge_tts; return "edge_tts"
     except ImportError:
         pass
     try:
-        import pyttsx3
-        return "pyttsx3"
+        import pyttsx3; return "pyttsx3"
     except ImportError:
         pass
     return "system"
@@ -30,19 +29,16 @@ def _play_mp3(path: str):
     for cmd in [["mpg123", "-q", path], ["afplay", path],
                 ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path]]:
         if subprocess.run(["which", cmd[0]], capture_output=True).returncode == 0:
-            subprocess.run(cmd)
-            return
+            subprocess.run(cmd); return
 
 
 def _play_pcm(pcm_bytes: bytes, sample_rate=22050, on_rms: Optional[Callable] = None):
-    """Play raw PCM int16 bytes via sounddevice, feeding RMS to callback."""
     try:
         import sounddevice as sd
         arr = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
         if on_rms and len(arr) > 0:
             on_rms(float(np.sqrt(np.mean(arr**2))))
-        sd.play(arr, sample_rate)
-        sd.wait()
+        sd.play(arr, sample_rate); sd.wait()
     except Exception as e:
         print(f"[JARVIS audio] PCM playback failed: {e}")
 
@@ -70,7 +66,6 @@ class AudioEngine:
                 from faster_whisper import WhisperModel
                 print(f"[JARVIS] Loading Whisper ({model_name})...")
                 self._whisper = ("faster", WhisperModel(model_name, device="cpu", compute_type="int8"))
-                print("[JARVIS] Whisper ready.")
             except ImportError:
                 try:
                     import whisper
@@ -98,11 +93,61 @@ class AudioEngine:
             try: os.unlink(tmp)
             except: pass
 
-    def speak(self, text: str):
-        raise NotImplementedError
-
     def record_and_process(self):
-        raise NotImplementedError
+        """Record from microphone until silence, transcribe, and respond."""
+        def _run():
+            try:
+                import sounddevice as sd
+                SR, CHUNK = 16000, 1024
+                SILENCE_RMS  = 0.01
+                SILENCE_SECS = 1.5
+                SPEECH_RMS   = 0.015
+                silence_limit = int(SILENCE_SECS * SR / CHUNK)
+
+                self.is_listening = True
+                if self.on_listening_start: self.on_listening_start()
+
+                chunks, silence_n, started = [], 0, False
+                t0 = time.time()
+
+                with sd.InputStream(samplerate=SR, channels=1, dtype="float32", blocksize=CHUNK) as stream:
+                    while self.is_listening and (time.time() - t0) < 30:
+                        data, _ = stream.read(CHUNK)
+                        rms = float(np.sqrt(np.mean(data**2)))
+                        if self.on_audio_level:
+                            self.on_audio_level(min(rms * 8, 1.0))
+                        if not started:
+                            if rms > SPEECH_RMS: started = True
+                            elif time.time() - t0 > 8: break
+                            continue
+                        chunks.append(data.copy())
+                        silence_n = (silence_n + 1) if rms < SILENCE_RMS else 0
+                        if silence_n >= silence_limit: break
+
+                self.is_listening = False
+                if self.on_listening_stop: self.on_listening_stop()
+                if self.on_audio_level: self.on_audio_level(0.0)
+
+                if not chunks: return
+                audio = np.concatenate(chunks).flatten()
+                text  = self._transcribe(audio, SR)
+                if not text.strip(): return
+
+                print(f"[BOSS]: {text}")
+                if self.on_transcription: self.on_transcription(text)
+
+                response = self.brain.think(text, on_chunk=self.on_response_ready)
+                print(f"[JARVIS]: {response}")
+                self.speak(response)
+
+            except ImportError:
+                if self.on_error: self.on_error("sounddevice not installed. Run: pip install sounddevice")
+            except Exception as e:
+                self.is_listening = False
+                if self.on_listening_stop: self.on_listening_stop()
+                if self.on_error: self.on_error(str(e))
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def process_text(self, text: str):
         def _run():
@@ -111,6 +156,9 @@ class AudioEngine:
             print(f"[JARVIS]: {response}")
             self.speak(response)
         threading.Thread(target=_run, daemon=True).start()
+
+    def speak(self, text: str):
+        raise NotImplementedError
 
     def stop(self):
         self.is_listening = False
