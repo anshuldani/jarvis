@@ -161,7 +161,39 @@ class AudioEngine:
         threading.Thread(target=_run, daemon=True).start()
 
     def _speak_elevenlabs(self, text: str):
-        raise NotImplementedError("elevenlabs not yet implemented")
+        key = os.environ.get("ELEVENLABS_API_KEY", "")
+        vid = self.ELEVEN_VOICE_ID
+        mdl = self.ELEVEN_MODEL
+        # Try new SDK (1.x) first
+        try:
+            from elevenlabs.client import ElevenLabs
+            from elevenlabs import VoiceSettings
+            client = ElevenLabs(api_key=key)
+            audio_bytes = b"".join(client.generate(
+                text=text, voice=vid, model=mdl,
+                voice_settings=VoiceSettings(stability=0.4, similarity_boost=0.85,
+                                             style=0.3, use_speaker_boost=True)
+            ))
+            _play_pcm(audio_bytes, on_rms=self.on_audio_level)
+            return
+        except Exception:
+            pass
+        # Old SDK (0.x)
+        try:
+            from elevenlabs import generate, set_api_key, Voice, VoiceSettings
+            set_api_key(key)
+            audio = generate(
+                text=text,
+                voice=Voice(voice_id=vid, settings=VoiceSettings(
+                    stability=0.4, similarity_boost=0.85, style=0.3, use_speaker_boost=True)),
+                model=mdl, stream=False
+            )
+            _play_pcm(audio if isinstance(audio, bytes) else b"".join(audio),
+                      on_rms=self.on_audio_level)
+            return
+        except Exception as e:
+            print(f"[JARVIS] ElevenLabs failed: {e}, falling back to edge-tts")
+            self._speak_edge(text)
 
     def _speak_edge(self, text: str):
         raise NotImplementedError("edge-tts not yet implemented")
