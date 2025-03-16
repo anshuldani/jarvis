@@ -196,13 +196,36 @@ class AudioEngine:
             self._speak_edge(text)
 
     def _speak_edge(self, text: str):
-        raise NotImplementedError("edge-tts not yet implemented")
+        import edge_tts
+        async def _go():
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+                tmp = f.name
+            try:
+                await edge_tts.Communicate(text, self.EDGE_VOICE).save(tmp)
+                if self.on_audio_level: self.on_audio_level(0.6)
+                _play_mp3(tmp)
+            finally:
+                try: os.unlink(tmp)
+                except: pass
+        asyncio.run(_go())
 
     def _speak_pyttsx3(self, text: str):
-        raise NotImplementedError("pyttsx3 not yet implemented")
+        import pyttsx3
+        eng = pyttsx3.init()
+        for v in eng.getProperty("voices"):
+            if "male" in v.name.lower() or "david" in v.name.lower():
+                eng.setProperty("voice", v.id); break
+        eng.setProperty("rate", 170)
+        eng.say(text); eng.runAndWait()
 
     def _speak_system(self, text: str):
-        raise NotImplementedError("system TTS not yet implemented")
+        import platform
+        if platform.system() == "Darwin":
+            subprocess.run(["say", "-v", "Alex", text])
+        elif platform.system() == "Linux":
+            subprocess.run(["espeak", "-s", "160", text])
+        else:
+            print(f"[JARVIS]: {text}")
 
     def stop(self):
         self.is_listening = False
