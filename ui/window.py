@@ -91,11 +91,61 @@ class WaveformWidget(QWidget):
 
     def _tick(self):
         self._t += 0.06
-        # Placeholder — animations added next
+        rms = self._rms
+        if self._state == "idle":
+            for i in range(N_BARS):
+                phase = (i / N_BARS) * 2 * 3.14159
+                self._target[i] = 0.08 + 0.12 * abs(math.sin(self._t * 0.8 + phase))
+        elif self._state == "listening":
+            center = N_BARS / 2
+            for i in range(N_BARS):
+                dist  = abs(i - center) / center
+                env   = 1.0 - dist * 0.5
+                noise = random.uniform(0.85, 1.15)
+                self._target[i] = max(0.05, min(0.95,
+                    0.05 + rms * 6 * env * noise + 0.04 * abs(math.sin(self._t * 4 + i * 0.3))
+                ))
+        elif self._state == "thinking":
+            self._sweep = (self._sweep + 1) % N_BARS
+            for i in range(N_BARS):
+                dist = min(abs(i - self._sweep), N_BARS - abs(i - self._sweep))
+                glow = max(0, 1 - dist / 6)
+                self._target[i] = 0.08 + glow * 0.82
+        elif self._state == "speaking":
+            for i in range(N_BARS):
+                phase = (i / N_BARS) * math.pi * 4
+                wave  = abs(math.sin(self._t * 6 + phase))
+                self._target[i] = max(0.05, min(0.95,
+                    0.1 + (rms * 5 + 0.3) * wave + random.uniform(0, 0.05)
+                ))
+        for i in range(N_BARS):
+            self._bars[i] += (self._target[i] - self._bars[i]) * 0.35
         self.update()
 
     def paintEvent(self, event):
-        pass  # drawing added next
+        p = QPainter(self)
+        p.setRenderHint(Antialias)
+        w, h = self.width(), self.height()
+        total_bar_w = N_BARS * 6 + (N_BARS - 1) * 4
+        x0 = (w - total_bar_w) // 2
+        pad = 6
+        c = self._color
+        for i, amp in enumerate(self._bars):
+            bar_h = max(4, int((h - pad * 2) * amp))
+            bx = x0 + i * 10
+            by = (h - bar_h) // 2
+            grad = QLinearGradient(bx, by, bx, by + bar_h)
+            core = QColor(c.red(), c.green(), c.blue(), 220)
+            dim  = QColor(c.red(), c.green(), c.blue(), 60)
+            grad.setColorAt(0.0, dim); grad.setColorAt(0.3, core)
+            grad.setColorAt(0.7, core); grad.setColorAt(1.0, dim)
+            p.setPen(NoPen); p.setBrush(QBrush(grad))
+            path = QPainterPath()
+            radius = min(3, bar_h // 2)
+            path.addRoundedRect(bx, by, 6, bar_h, radius, radius)
+            p.drawPath(path)
+        p.setPen(QPen(QColor(c.red(), c.green(), c.blue(), 25), 1))
+        p.drawLine(0, h // 2, w, h // 2)
 
     def mousePressEvent(self, ev):
         if ev.button() == LeftBtn:
