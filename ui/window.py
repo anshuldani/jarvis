@@ -186,6 +186,91 @@ class JarvisWindow(QWidget):
     def set_wake_listener(self, wake):
         self._wake = wake
 
+    # ── System tray ────────────────────────────────────────────────────────────
+
+    def _build_tray(self):
+        try:
+            icon = self._make_tray_icon()
+            self._tray = QSystemTrayIcon(icon, self)
+            menu = QMenu()
+            act_show = QAction("Show JARVIS", self)
+            act_show.triggered.connect(self._show_window)
+            act_quit = QAction("Quit", self)
+            act_quit.triggered.connect(QApplication.instance().quit)
+            menu.addAction(act_show); menu.addSeparator(); menu.addAction(act_quit)
+            self._tray.setContextMenu(menu)
+            self._tray.setToolTip("J.A.R.V.I.S. — Listening for wake phrase")
+            self._tray.activated.connect(self._tray_clicked)
+            self._tray.show()
+            print("[JARVIS] Tray icon active.")
+        except Exception as e:
+            print(f"[JARVIS] Tray icon unavailable: {e}")
+            self._tray = None
+
+    def _make_tray_icon(self) -> QIcon:
+        pix = QPixmap(32, 32)
+        pix.fill(QColor(0, 0, 0, 0))
+        p = QPainter(pix)
+        p.setRenderHint(Antialias)
+        p.setPen(NoPen); p.setBrush(QColor(0, 130, 255, 210))
+        p.drawEllipse(1, 1, 30, 30)
+        p.setPen(QPen(QColor(255, 255, 255, 240), 1))
+        font = QFont("Courier New", 15)
+        if _Q6: font.setWeight(QFont.Weight.Bold)
+        else:   font.setBold(True)
+        p.setFont(font)
+        if _Q6: p.drawText(pix.rect(), AlignCenter, "J")
+        else:
+            from PyQt5.QtCore import QRect as _R
+            p.drawText(_R(0, 0, 32, 32), AlignCenter, "J")
+        p.end()
+        return QIcon(pix)
+
+    def _tray_clicked(self, reason):
+        if _Q6:
+            trigger = QSystemTrayIcon.ActivationReason.Trigger
+            dbl     = QSystemTrayIcon.ActivationReason.DoubleClick
+        else:
+            trigger = QSystemTrayIcon.Trigger
+            dbl     = QSystemTrayIcon.DoubleClick
+        if reason in (trigger, dbl):
+            self._show_window()
+
+    def _show_window(self):
+        self.show(); self.raise_(); self.activateWindow()
+
+    def _hide_to_tray(self):
+        self.hide()
+        if self._tray:
+            self._tray.showMessage("J.A.R.V.I.S.",
+                "Still listening, Boss. Say the wake phrase to bring me back.",
+                QSystemTrayIcon.MessageIcon.Information if _Q6 else QSystemTrayIcon.Information, 2000)
+
+    # ── Signal wiring ──────────────────────────────────────────────────────────
+
+    def _wire_signals(self):
+        self.sig.listening_start.connect(self._ui_listen_start)
+        self.sig.listening_stop.connect(self._ui_listen_stop)
+        self.sig.speaking_start.connect(self._ui_speak_start)
+        self.sig.speaking_stop.connect(self._ui_speak_stop)
+        self.sig.transcription.connect(self._ui_trans)
+        self.sig.response_chunk.connect(self._ui_chunk)
+        self.sig.tool_use.connect(self._ui_tool)
+        self.sig.audio_level.connect(self._ui_level)
+        self.sig.error.connect(self._ui_error)
+        self.sig.wake_triggered.connect(self._on_wake)
+
+    def _wire_audio(self):
+        self.audio.on_listening_start = lambda: self.sig.listening_start.emit()
+        self.audio.on_listening_stop  = lambda: self.sig.listening_stop.emit()
+        self.audio.on_transcription   = lambda t: self.sig.transcription.emit(t)
+        self.audio.on_speaking_start  = lambda t: self.sig.speaking_start.emit(t)
+        self.audio.on_speaking_stop   = lambda: self.sig.speaking_stop.emit()
+        self.audio.on_response_ready  = lambda c: self.sig.response_chunk.emit(c)
+        self.audio.on_audio_level     = lambda r: self.sig.audio_level.emit(r)
+        self.audio.on_error           = lambda e: self.sig.error.emit(e)
+        self.brain.on_tool_use        = lambda n, i: self.sig.tool_use.emit(n, i)
+
     def _build_ui(self):
         lo = QVBoxLayout(self)
         lo.setContentsMargins(18, 18, 18, 14)
