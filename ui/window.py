@@ -166,6 +166,7 @@ class JarvisWindow(QWidget):
                                 Qt.WindowType.WindowStaysOnTopHint |
                                 Qt.WindowType.Tool)
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+            self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         else:
             self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
             self.setAttribute(Qt.WA_TranslucentBackground)
@@ -173,7 +174,104 @@ class JarvisWindow(QWidget):
         self.resize(420, 540)
         scr = QApplication.primaryScreen().geometry()
         self.move(scr.width() - 460, scr.height() - 580)
-        self.show()
+
+        self._build_ui()
+        self._wire_signals()
+        self._wire_audio()
+        self._build_tray()
+
+        QTimer.singleShot(200, self.show)
+        QTimer.singleShot(500, self._silent_boot)
 
     def set_wake_listener(self, wake):
         self._wake = wake
+
+    def _build_ui(self):
+        lo = QVBoxLayout(self)
+        lo.setContentsMargins(18, 18, 18, 14)
+        lo.setSpacing(10)
+
+        # Header
+        hdr = QHBoxLayout()
+        self.lbl_title = QLabel("J.A.R.V.I.S.")
+        self.lbl_title.setStyleSheet(
+            "color:rgba(0,180,255,230);font-family:'Courier New',monospace;"
+            "font-size:13px;font-weight:bold;letter-spacing:4px;")
+        self.lbl_status = QLabel("● STANDBY")
+        self.lbl_status.setStyleSheet(
+            "color:rgba(255,165,0,200);font-family:'Courier New',monospace;"
+            "font-size:10px;letter-spacing:1px;")
+        _bs = ("QPushButton{background:transparent;color:rgba(255,255,255,90);border:none;font-size:13px;}"
+               "QPushButton:hover{color:rgba(255,80,80,220);}")
+        btn_x = QPushButton("✕")
+        btn_x.setFixedSize(22, 22); btn_x.setStyleSheet(_bs)
+        btn_x.clicked.connect(self._hide_to_tray)
+        btn_m = QPushButton("–")
+        btn_m.setFixedSize(22, 22)
+        btn_m.setStyleSheet(_bs.replace("rgba(255,80,80,220)", "rgba(255,255,255,200)"))
+        btn_m.clicked.connect(self._toggle_collapse)
+        hdr.addWidget(self.lbl_title); hdr.addStretch()
+        hdr.addWidget(self.lbl_status); hdr.addSpacing(8)
+        hdr.addWidget(btn_m); hdr.addWidget(btn_x)
+
+        self.lbl_mode = QLabel("STANDBY")
+        self.lbl_mode.setStyleSheet(
+            "color:rgba(0,200,255,160);font-family:'Courier New',monospace;"
+            "font-size:10px;letter-spacing:3px;")
+        self.lbl_mode.setAlignment(AlignCenter)
+
+        self.wave = WaveformWidget()
+        self.wave.clicked.connect(self._activate_voice)
+
+        self.lbl_hint = QLabel("click waveform or press SPACE to speak")
+        self.lbl_hint.setStyleSheet(
+            "color:rgba(255,255,255,50);font-family:'Courier New',monospace;font-size:9px;")
+        self.lbl_hint.setAlignment(AlignCenter)
+
+        self.tx = QTextEdit()
+        self.tx.setReadOnly(True)
+        self.tx.setStyleSheet(
+            "QTextEdit{background:rgba(0,8,25,200);border:1px solid rgba(0,140,255,50);"
+            "border-radius:8px;color:rgba(190,220,255,210);"
+            "font-family:'Courier New',monospace;font-size:12px;padding:8px;"
+            "selection-background-color:rgba(0,150,255,70);}")
+
+        inp = QHBoxLayout(); inp.setSpacing(6)
+        self.txt = QLineEdit()
+        self.txt.setPlaceholderText("Type to JARVIS...")
+        self.txt.setStyleSheet(
+            "QLineEdit{background:rgba(0,12,35,210);border:1px solid rgba(0,140,255,70);"
+            "border-radius:6px;color:rgba(215,235,255,220);"
+            "font-family:'Courier New',monospace;font-size:12px;padding:6px 10px;}"
+            "QLineEdit:focus{border:1px solid rgba(0,200,255,170);}")
+        self.txt.returnPressed.connect(self._submit)
+        _ibs = ("QPushButton{background:rgba(0,90,190,110);border:1px solid rgba(0,140,255,70);"
+                "border-radius:6px;color:rgba(0,200,255,190);font-size:15px;}"
+                "QPushButton:hover{background:rgba(0,130,255,150);}")
+        b_mic = QPushButton("🎤"); b_mic.setFixedSize(36, 36); b_mic.setStyleSheet(_ibs)
+        b_mic.clicked.connect(self._activate_voice)
+        b_snd = QPushButton("⏎"); b_snd.setFixedSize(36, 36); b_snd.setStyleSheet(_ibs)
+        b_snd.clicked.connect(self._submit)
+        inp.addWidget(self.txt); inp.addWidget(b_mic); inp.addWidget(b_snd)
+
+        bot = QHBoxLayout()
+        b_clr = QPushButton("⟳  CLEAR")
+        b_clr.setStyleSheet(
+            "QPushButton{background:transparent;border:1px solid rgba(255,90,90,50);"
+            "border-radius:4px;color:rgba(255,90,90,100);"
+            "font-family:'Courier New',monospace;font-size:9px;padding:3px 8px;letter-spacing:1px;}"
+            "QPushButton:hover{color:rgba(255,90,90,190);border-color:rgba(255,90,90,140);}")
+        b_clr.clicked.connect(self._clear)
+        self.lbl_mem = QLabel("0 msgs")
+        self.lbl_mem.setStyleSheet(
+            "color:rgba(255,255,255,50);font-family:'Courier New',monospace;font-size:9px;")
+        bot.addWidget(b_clr); bot.addStretch(); bot.addWidget(self.lbl_mem)
+
+        lo.addLayout(hdr); lo.addSpacing(4)
+        lo.addWidget(self.lbl_mode)
+        lo.addWidget(self.wave)
+        lo.addWidget(self.lbl_hint)
+        lo.addWidget(self.tx)
+        lo.addLayout(inp); lo.addLayout(bot)
+
+        self.setFocusPolicy(StrongFocus); self.setFocus()
