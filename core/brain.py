@@ -137,5 +137,16 @@ class JarvisBrain:
 
         return full_response
 
+    def wake_greeting(self) -> str:
+        """Called when Boss says the wake phrase. Delivers an arrival briefing."""
+        return self.think(
+            "Boss just arrived home. Do all of this in one smooth spoken response:\n"
+            "1. Welcome Boss with one sharp JARVIS line\n"
+            "2. Get the current weather and mention it conversationally\n"
+            "3. Tell Boss the current time and date\n"
+            "4. Check battery status\n"
+            "Keep it to 3-4 sentences total. Natural, spoken, no lists."
+        )
+
     def clear_memory(self):
         self.conversation_history = []
