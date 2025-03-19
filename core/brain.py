@@ -60,6 +60,17 @@ class JarvisBrain:
              "input_schema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}},
             {"name": "set_volume", "description": "Set system volume 0-100",
              "input_schema": {"type": "object", "properties": {"level": {"type": "integer"}}, "required": ["level"]}},
+            {
+                "name": "get_weather",
+                "description": "Get current weather conditions and today's forecast for a location. Leave location empty to auto-detect.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "City or location name. Empty = auto-detect from IP."}
+                    },
+                    "required": []
+                }
+            }
         ]
 
     def _execute_tool(self, tool_name: str, tool_input: dict) -> str:
@@ -79,6 +90,7 @@ class JarvisBrain:
                 "take_screenshot":  lambda: tools.take_screenshot(tool_input.get("filename")),
                 "list_directory":   lambda: tools.list_directory(tool_input["path"]),
                 "set_volume":       lambda: tools.set_volume(tool_input["level"]),
+                "get_weather":      lambda: tools.get_weather(tool_input.get("location", "")),
             }
             return dispatch.get(tool_name, lambda: f"Unknown tool: {tool_name}")()
         except Exception as e:
