@@ -360,3 +360,184 @@ class JarvisWindow(QWidget):
         lo.addLayout(inp); lo.addLayout(bot)
 
         self.setFocusPolicy(StrongFocus); self.setFocus()
+
+    # ── UI state handlers ─────────────────────────────────────────────────────
+
+    def _set_mode(self, text, color):
+        self.lbl_mode.setText(text)
+        self.lbl_mode.setStyleSheet(
+            f"color:{color};font-family:'Courier New',monospace;"
+            "font-size:10px;letter-spacing:3px;")
+
+    def _set_status(self, text, color="rgba(0,200,100,200)"):
+        self.lbl_status.setText(text)
+        self.lbl_status.setStyleSheet(
+            f"color:{color};font-family:'Courier New',monospace;"
+            "font-size:10px;letter-spacing:1px;")
+
+    def _ui_listen_start(self):
+        self.wave.set_state("listening")
+        self._set_mode("LISTENING", "rgba(0,255,150,200)")
+        self._set_status("● LISTENING", "rgba(0,255,150,200)")
+        self._log("\n[BOSS]", "rgba(0,220,150,200)")
+
+    def _ui_listen_stop(self):
+        self.wave.set_state("thinking")
+        self._set_mode("PROCESSING", "rgba(255,165,0,200)")
+        self._set_status("● THINKING", "rgba(255,165,0,200)")
+
+    def _ui_trans(self, t):
+        self._log(f" {t}", "rgba(200,230,255,170)")
+        self._log("\n[JARVIS]  ", "rgba(0,180,255,220)")
+
+    def _ui_chunk(self, c):
+        self._log(c, "rgba(140,205,255,200)")
+        n = len(self.brain.conversation_history) // 2
+        self.lbl_mem.setText(f"{n} msgs")
+
+    def _ui_speak_start(self, _):
+        self.wave.set_state("speaking")
+        self._set_mode("SPEAKING", "rgba(0,220,255,210)")
+        self._set_status("● SPEAKING", "rgba(0,220,255,200)")
+
+    def _ui_speak_stop(self):
+        self.wave.set_state("idle")
+        self._set_mode("STANDBY", "rgba(0,200,255,160)")
+        self._set_status("● ONLINE", "rgba(0,200,100,200)")
+        if self._wake:
+            QTimer.singleShot(2000, self._wake.resume)
+
+    def _ui_tool(self, name, _):
+        label = name.replace("_", " ").title()
+        self.wave.set_state("thinking")
+        self._log(f"\n   ↳ [{label}]", "rgba(255,165,0,140)")
+        self._set_status(f"● {label.upper()}", "rgba(255,165,0,200)")
+
+    def _ui_level(self, rms: float):
+        self.wave.set_audio_level(rms)
+
+    def _ui_error(self, e):
+        self.wave.set_state("error")
+        self._log(f"\n[ERR] {e}", "rgba(255,80,80,200)")
+        self._set_status("● ERROR", "rgba(255,80,80,200)")
+        QTimer.singleShot(3000, lambda: self._set_status("● ONLINE"))
+
+    # ── Wake word activation ──────────────────────────────────────────────────
+
+    def _on_wake(self):
+        self._show_window()
+        self.wave.set_state("thinking")
+        self._set_status("● WAKING", "rgba(0,220,255,200)")
+        self._set_mode("WAKING UP", "rgba(0,220,255,200)")
+        self._log("\n[SYS] Wake phrase detected.", "rgba(0,200,255,130)")
+        self._log("\n[JARVIS]  ", "rgba(0,180,255,220)")
+        def _greet():
+            try:
+                response = self.brain.wake_greeting()
+                self.sig.response_chunk.emit(response)
+                self.audio.speak(response)
+            except Exception as e:
+                self.sig.error.emit(f"Wake greeting failed: {e}")
+        threading.Thread(target=_greet, daemon=True).start()
+
+    # ── Silent boot ───────────────────────────────────────────────────────────
+
+    def _silent_boot(self):
+        print("[JARVIS] Armed — waiting for wake phrase.")
+        self._set_status("● ARMED", "rgba(0,200,100,200)")
+        self._set_mode("SAY: WAKE UP, DADDY'S HOME", "rgba(0,200,255,160)")
+        self._log("\n[SYS] J.A.R.V.I.S. v2.0 ONLINE",         "rgba(0,180,255,210)")
+        self._log("\n[SYS] Wake word listener: ARMED",          "rgba(0,200,150,160)")
+        self._log("\n[SYS] Say: 'wake up, daddy's home'",       "rgba(0,200,150,160)")
+        self._log("\n[SYS] Or type below and press Enter.",     "rgba(100,150,200,120)")
+
+    # ── Actions ───────────────────────────────────────────────────────────────
+
+    def _activate_voice(self):
+        if not self.audio.is_listening and not self.audio.is_speaking:
+            if self._wake: self._wake.pause()
+            self.audio.record_and_process()
+
+    def _submit(self):
+        text = self.txt.text().strip()
+        if not text: return
+        self.txt.clear()
+        self._log(f"\n[BOSS] {text}", "rgba(0,220,150,200)")
+        self._log("\n[JARVIS]  ", "rgba(0,180,255,220)")
+        self.wave.set_state("thinking")
+        self._set_status("● THINKING", "rgba(255,165,0,200)")
+        self.audio.process_text(text)
+
+    def _clear(self):
+        self.brain.clear_memory()
+        self._log("\n[SYS] Memory wiped.", "rgba(255,200,0,100)")
+        self.lbl_mem.setText("0 msgs")
+
+    def _toggle_collapse(self):
+        if self.tx.isVisible():
+            self.tx.hide(); self.resize(420, 190)
+        else:
+            self.tx.show(); self.resize(420, 540)
+
+    # ── Transcript helper ─────────────────────────────────────────────────────
+
+    def _log(self, text, color="rgba(190,220,255,200)"):
+        c = self.tx.textCursor()
+        c.movePosition(MoveEnd(c))
+        self.tx.setTextCursor(c)
+        safe = (text.replace("&", "&amp;").replace("<", "&lt;")
+                    .replace(">", "&gt;").replace("\n", "<br>"))
+        self.tx.insertHtml(
+            f'<span style="color:{color};font-family:Courier New,monospace;font-size:12px;">' +
+            f'{safe}</span>')
+        c = self.tx.textCursor()
+        c.movePosition(MoveEnd(c))
+        self.tx.setTextCursor(c)
+        self.tx.ensureCursorVisible()
+
+    # ── Window painting ───────────────────────────────────────────────────────
+
+    def paintEvent(self, ev):
+        p = QPainter(self)
+        p.setRenderHint(Antialias)
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, self.width(), self.height(), 14, 14)
+        p.setPen(NoPen); p.setBrush(QBrush(QColor(2, 8, 20, 235)))
+        p.drawPath(path)
+        p.setPen(QPen(QColor(0, 140, 255, 70), 1)); p.setBrush(NoBrush)
+        p.drawRoundedRect(1, 1, self.width() - 2, self.height() - 2, 13, 13)
+        g = QLinearGradient(0, 0, self.width(), 0)
+        g.setColorAt(0, QColor(0, 0, 0, 0)); g.setColorAt(0.25, QColor(0, 160, 255, 55))
+        g.setColorAt(0.75, QColor(0, 160, 255, 55)); g.setColorAt(1, QColor(0, 0, 0, 0))
+        p.setPen(QPen(QBrush(g), 1))
+        p.drawLine(14, 1, self.width() - 14, 1)
+        p.setPen(QPen(QColor(0, 170, 255, 90), 1.5))
+        s, w, h = 16, self.width(), self.height()
+        for x1, y1, x2, y2 in [
+            (8,8,8+s,8),(8,8,8,8+s),(w-8-s,8,w-8,8),(w-8,8,w-8,8+s),
+            (8,h-8,8+s,h-8),(8,h-8-s,8,h-8),(w-8-s,h-8,w-8,h-8),(w-8,h-8-s,w-8,h-8),
+        ]:
+            p.drawLine(x1, y1, x2, y2)
+
+    # ── Keyboard + drag ───────────────────────────────────────────────────────
+
+    def keyPressEvent(self, ev):
+        if ev.key() == Key_Esc: self._hide_to_tray()
+        elif ev.key() == Key_Spc and not self.txt.hasFocus(): self._activate_voice()
+        else: super().keyPressEvent(ev)
+
+    def mousePressEvent(self, ev):
+        if ev.button() == LeftBtn:
+            gp = ev.globalPosition().toPoint() if _Q6 else ev.globalPos()
+            self._drag = gp - self.frameGeometry().topLeft()
+
+    def mouseMoveEvent(self, ev):
+        if ev.buttons() == LeftBtn and self._drag:
+            gp = ev.globalPosition().toPoint() if _Q6 else ev.globalPos()
+            self.move(gp - self._drag)
+
+    def mouseReleaseEvent(self, ev):
+        self._drag = None
+
+    def closeEvent(self, ev):
+        ev.ignore(); self._hide_to_tray()
