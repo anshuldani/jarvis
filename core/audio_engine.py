@@ -166,7 +166,7 @@ class AudioEngine:
         key = os.environ.get("ELEVENLABS_API_KEY", "")
         vid = self.ELEVEN_VOICE_ID
         mdl = self.ELEVEN_MODEL
-        # Try new SDK (1.x) first
+        # Try new SDK (1.x) — preferred, lower latency streaming
         try:
             from elevenlabs.client import ElevenLabs
             from elevenlabs import VoiceSettings
