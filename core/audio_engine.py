@@ -95,7 +95,9 @@ class AudioEngine:
             try:
                 import sounddevice as sd
                 SR, CHUNK = 16000, 1024
-                SILENCE_RMS = 0.01; SILENCE_SECS = 1.5; SPEECH_RMS = 0.015
+                SILENCE_RMS  = 0.01
+                SILENCE_SECS = 1.5
+                SPEECH_RMS   = 0.015
                 silence_limit = int(SILENCE_SECS * SR / CHUNK)
                 self.is_listening = True
                 if self.on_listening_start: self.on_listening_start()
