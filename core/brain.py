@@ -51,6 +51,7 @@ You are JARVIS. Act like it."""
 
 
 class JarvisBrain:
+    """Drives JARVIS via Claude API. Run think() on a daemon thread; update UI via Qt signals."""
     def __init__(self):
         self.client = anthropic.Anthropic()
         self.conversation_history = []

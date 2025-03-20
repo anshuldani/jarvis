@@ -36,6 +36,7 @@ StrongFocus = Qt.FocusPolicy.StrongFocus  if _Q6 else Qt.StrongFocus
 Key_Esc     = Qt.Key.Key_Escape           if _Q6 else Qt.Key_Escape
 Key_Spc     = Qt.Key.Key_Space            if _Q6 else Qt.Key_Space
 
+# Waveform bar colors per state
 STATE_COLORS = {
     "idle":      QColor(0,   150, 255),
     "listening": QColor(0,   255, 150),
@@ -119,7 +120,7 @@ class WaveformWidget(QWidget):
                     0.1 + (rms * 5 + 0.3) * wave + random.uniform(0, 0.05)
                 ))
         for i in range(N_BARS):
-            self._bars[i] += (self._target[i] - self._bars[i]) * 0.35
+            self._bars[i] += (self._target[i] - self._bars[i]) * 0.30  # lower = smoother
         self.update()
 
     def paintEvent(self, event):
@@ -308,7 +309,7 @@ class JarvisWindow(QWidget):
         self.wave = WaveformWidget()
         self.wave.clicked.connect(self._activate_voice)
 
-        self.lbl_hint = QLabel("click waveform or press SPACE to speak")
+        self.lbl_hint = QLabel("click waveform · SPACE to speak · ESC to hide")
         self.lbl_hint.setStyleSheet(
             "color:rgba(255,255,255,50);font-family:'Courier New',monospace;font-size:9px;")
         self.lbl_hint.setAlignment(AlignCenter)

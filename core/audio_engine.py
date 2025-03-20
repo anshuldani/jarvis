@@ -22,6 +22,7 @@ def _detect_tts():
 
 
 def _play_mp3(path: str):
+    """Play an mp3 file using mpg123, afplay, or ffplay."""
     for cmd in [["mpg123", "-q", path], ["afplay", path],
                 ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path]]:
         if subprocess.run(["which", cmd[0]], capture_output=True).returncode == 0:

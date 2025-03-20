@@ -10,7 +10,7 @@ PyQt6>=6.6.0          # OR: conda install -c conda-forge pyqt  (installs PyQt5)
 # Voice - STT
 faster-whisper>=1.0.0
 sounddevice>=0.4.6
-numpy>=1.24.0
+numpy>=1.24.0,<2.0   # 2.x breaks some audio libs
 
 # Voice - TTS (pick at least one)
 elevenlabs>=0.2.0      # Best quality — needs ELEVENLABS_API_KEY

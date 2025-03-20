@@ -80,7 +80,7 @@ class SystemTools:
 
     def open_url(self, url: str) -> str:
         """Open URL in default browser"""
-        if not url.startswith("http"):
+        if not url.startswith(("http://", "https://", "ftp://")):
             url = "https://" + url
         import webbrowser
         webbrowser.open(url)
@@ -119,7 +119,7 @@ class SystemTools:
 
     def run_command(self, command: str) -> str:
         """Run a shell command safely"""
-        dangerous = ["rm -rf /", "mkfs", "dd if=/dev/zero", ":(){:|:&};:"]
+        dangerous = ["rm -rf /", "rm -rf ~", "mkfs", "dd if=/dev/zero", ":(){:|:&};:", "sudo rm -rf", "format c:"]
         for danger in dangerous:
             if danger in command:
                 return "I won't execute that command, Boss. It's too destructive."
@@ -173,7 +173,7 @@ class SystemTools:
                 results["disk"] = "Disk info unavailable"
         if info_type in ("processes", "all"):
             try:
-                procs = [(p.info['pid'], p.info['name']) for p in psutil.process_iter(['pid','name']) if p.info['name']][:20]
+                procs = [(p.info['pid'], p.info['name']) for p in psutil.process_iter(['pid','name']) if p.info['name']][:15]
                 results["processes"] = ", ".join([f"{n}({pid})" for pid, n in procs])
             except Exception:
                 results["processes"] = "Process list unavailable"
