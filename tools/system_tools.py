@@ -42,7 +42,20 @@ class SystemTools:
                     return f"Launched {app_name}, Boss."
                 except FileNotFoundError:
                     continue
-        return f"Couldn't locate {app_name}, Boss."
+        elif self.system == "Windows":
+            for c in candidates:
+                try:
+                    subprocess.Popen(["start", c], shell=True)
+                    return f"Opened {app_name}, Boss."
+                except Exception:
+                    continue
+        # Universal fallback
+        try:
+            subprocess.Popen(["xdg-open", app_name_lower])
+            return f"Attempting to launch {app_name}, Boss."
+        except Exception:
+            pass
+        return f"I couldn't locate {app_name} on this system, Boss. It may not be installed."
 
     def web_search(self, query: str) -> str:
         """Search the web using DuckDuckGo JSON API"""
