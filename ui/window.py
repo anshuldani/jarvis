@@ -37,6 +37,7 @@ Key_Esc     = Qt.Key.Key_Escape           if _Q6 else Qt.Key_Escape
 Key_Spc     = Qt.Key.Key_Space            if _Q6 else Qt.Key_Space
 
 # Waveform bar colors per state
+# Bar colors per state (dark navy background optimized)
 STATE_COLORS = {
     "idle":      QColor(0,   150, 255),
     "listening": QColor(0,   255, 150),
