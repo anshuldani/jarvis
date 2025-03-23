@@ -99,7 +99,7 @@ class WakeWordListener:
                 sd.wait()
                 audio = recording.flatten()
                 rms = float(np.sqrt(np.mean(audio**2)))
-                if rms < 0.005:
+                if rms < 0.005:  # skip near-silence to avoid Whisper hallucinations
                     continue
                 text = self._transcribe_chunk(audio)
                 if not text:
