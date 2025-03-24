@@ -112,7 +112,7 @@ class JarvisBrain:
             }
             return dispatch.get(tool_name, lambda: f"Unknown tool: {tool_name}")()
         except Exception as e:
-            return f"Tool error: {e}"
+            return f"Tool error ({tool_name}): {e}"
 
     def think(self, user_input: str, on_chunk: Optional[Callable] = None) -> str:
         """Send message to Claude, handle tool loop, return full response text."""
