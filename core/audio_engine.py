@@ -231,4 +231,5 @@ class AudioEngine:
             print(f"[JARVIS]: {text}")
 
     def stop(self):
+        """Interrupt active listening session."""
         self.is_listening = False
