@@ -168,3 +168,17 @@ class JarvisBrain:
 
     def clear_memory(self):
         self.conversation_history = []
+
+
+    def set_personality_mode(self, mode: str) -> None:
+        """Switch JARVIS personality mode: 'default', 'focused', 'casual'."""
+        modes = {
+            "focused": "You are in focused mode. Be extremely terse — 1 sentence maximum.",
+            "casual":  "You are in casual mode. Be conversational and relaxed.",
+            "default": "",
+        }
+        self._personality_override = modes.get(mode, "")
+
+    def get_conversation_length(self) -> int:
+        """Return number of turns in current conversation history."""
+        return len(self.conversation_history)
