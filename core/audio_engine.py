@@ -233,3 +233,17 @@ class AudioEngine:
     def stop(self):
         """Interrupt active listening session."""
         self.is_listening = False
+
+
+def safe_speak(engine, text: str, fallback_fn=None) -> bool:
+    """Attempt TTS; call fallback_fn if engine fails. Returns True on success."""
+    try:
+        engine.say(text)
+        engine.runAndWait()
+        return True
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"TTS engine failed: {e}")
+        if fallback_fn:
+            fallback_fn(text)
+        return False
