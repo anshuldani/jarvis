@@ -252,3 +252,30 @@ class SystemTools:
                     f"Humidity {humidity}%, wind {wind_mph} mph.")
         except Exception as e:
             return f"Weather unavailable: {e}"
+
+
+    def get_clipboard(self) -> str:
+        """Read current clipboard text content."""
+        try:
+            if self.system == "Darwin":
+                result = subprocess.run(["pbpaste"], capture_output=True, text=True)
+                return result.stdout.strip() or "Clipboard is empty, Boss."
+            elif self.system == "Linux":
+                result = subprocess.run(["xclip", "-selection", "clipboard", "-o"], capture_output=True, text=True)
+                return result.stdout.strip() or "Clipboard is empty, Boss."
+            return "Clipboard access not supported on this platform, Boss."
+        except Exception as e:
+            return f"Couldn't read clipboard: {e}"
+
+    def set_clipboard(self, text: str) -> str:
+        """Write text to the clipboard."""
+        try:
+            if self.system == "Darwin":
+                subprocess.run(["pbcopy"], input=text.encode(), check=True)
+                return "Copied to clipboard, Boss."
+            elif self.system == "Linux":
+                subprocess.run(["xclip", "-selection", "clipboard"], input=text.encode(), check=True)
+                return "Copied to clipboard, Boss."
+            return "Clipboard write not supported on this platform, Boss."
+        except Exception as e:
+            return f"Clipboard write failed: {e}"
