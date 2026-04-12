@@ -279,3 +279,18 @@ class SystemTools:
             return "Clipboard write not supported on this platform, Boss."
         except Exception as e:
             return f"Clipboard write failed: {e}"
+
+
+    def create_reminder(self, message: str, minutes: int) -> str:
+        """Schedule a macOS reminder notification after N minutes."""
+        try:
+            if self.system != "Darwin":
+                return "Reminders are only supported on macOS right now, Boss."
+            script = (
+                f'delay {minutes * 60}\n'
+                f'display notification "{message}" with title "JARVIS Reminder"'
+            )
+            subprocess.Popen(["osascript", "-e", script])
+            return f"Reminder set for {minutes} minute{'s' if minutes != 1 else ''} from now, Boss."
+        except Exception as e:
+            return f"Couldn't set reminder: {e}"
