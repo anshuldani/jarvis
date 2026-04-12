@@ -182,3 +182,13 @@ class JarvisBrain:
     def get_conversation_length(self) -> int:
         """Return number of turns in current conversation history."""
         return len(self.conversation_history)
+
+
+    def summarize_session(self) -> str:
+        """Ask JARVIS to produce a brief session summary."""
+        if not self.conversation_history:
+            return "No conversation to summarize, Boss."
+        return self.think(
+            "Summarize our conversation so far in 2-3 sentences max. "
+            "What were the key things Boss asked about or accomplished?"
+        )
