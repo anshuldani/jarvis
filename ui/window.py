@@ -543,3 +543,12 @@ class JarvisWindow(QWidget):
 
     def closeEvent(self, ev):
         ev.ignore(); self._hide_to_tray()
+
+
+def update_status_bar(window, text: str, timeout_ms: int = 3000) -> None:
+    """Show a temporary status message in the window's status bar."""
+    try:
+        if hasattr(window, 'statusBar'):
+            window.statusBar().showMessage(text, timeout_ms)
+    except Exception:
+        pass
