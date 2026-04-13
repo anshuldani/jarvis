@@ -294,3 +294,21 @@ class SystemTools:
             return f"Reminder set for {minutes} minute{'s' if minutes != 1 else ''} from now, Boss."
         except Exception as e:
             return f"Couldn't set reminder: {e}"
+
+
+    def get_battery_percentage(self) -> str:
+        """Return battery percentage as a plain string."""
+        try:
+            if self.system == "Darwin":
+                result = subprocess.run(
+                    ["pmset", "-g", "batt"], capture_output=True, text=True
+                )
+                import re
+                match = re.search(r'(\d+)%', result.stdout)
+                if match:
+                    pct = int(match.group(1))
+                    status = "charging" if "AC Power" in result.stdout else "on battery"
+                    return f"Battery at {pct}%, {status}, Boss."
+            return self.get_system_info("battery")
+        except Exception as e:
+            return f"Couldn't check battery: {e}"
