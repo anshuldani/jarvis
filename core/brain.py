@@ -192,3 +192,9 @@ class JarvisBrain:
             "Summarize our conversation so far in 2-3 sentences max. "
             "What were the key things Boss asked about or accomplished?"
         )
+
+
+    def trim_history(self, max_turns: int = 20) -> None:
+        """Keep conversation history to the last N turns to avoid token bloat."""
+        if len(self.conversation_history) > max_turns * 2:
+            self.conversation_history = self.conversation_history[-(max_turns * 2):]
