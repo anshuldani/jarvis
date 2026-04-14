@@ -64,3 +64,26 @@ print("  Tray icon → Show / Quit")
 print("=" * 52 + "\n")
 
 sys.exit(app.exec())
+
+
+# ── CLI text mode ─────────────────────────────────────────────────────────────
+# Run JARVIS in headless text mode for testing: python main.py --text
+import sys as _sys
+
+if __name__ == "__main__" and "--text" in _sys.argv:
+    from core.brain import JarvisBrain
+    brain = JarvisBrain()
+    print("JARVIS text mode. Type 'quit' to exit.\n")
+    while True:
+        try:
+            user_input = input("Boss: ").strip()
+            if user_input.lower() in ("quit", "exit", "q"):
+                print("JARVIS: Signing off, Boss.")
+                break
+            if not user_input:
+                continue
+            response = brain.think(user_input)
+            print(f"JARVIS: {response}\n")
+        except (KeyboardInterrupt, EOFError):
+            print("\nJARVIS: Signing off, Boss.")
+            break
