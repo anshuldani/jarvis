@@ -198,3 +198,15 @@ class JarvisBrain:
         """Keep conversation history to the last N turns to avoid token bloat."""
         if len(self.conversation_history) > max_turns * 2:
             self.conversation_history = self.conversation_history[-(max_turns * 2):]
+
+
+    def inject_context(self, context: str) -> None:
+        """Inject background context as a silent message before next turn."""
+        self.conversation_history.append({
+            "role": "user",
+            "content": f"[Background context — do not acknowledge unless asked]: {context}"
+        })
+        self.conversation_history.append({
+            "role": "assistant",
+            "content": "Understood, Boss."
+        })
