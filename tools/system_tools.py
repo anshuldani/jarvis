@@ -312,3 +312,18 @@ class SystemTools:
             return self.get_system_info("battery")
         except Exception as e:
             return f"Couldn't check battery: {e}"
+
+
+    def list_running_apps(self) -> str:
+        """List currently running user-visible applications."""
+        try:
+            if self.system == "Darwin":
+                script = 'tell application "System Events" to get name of every application process whose background only is false'
+                result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+                apps = [a.strip() for a in result.stdout.split(",") if a.strip()]
+                return "Running apps: " + ", ".join(apps) + ", Boss."
+            result = subprocess.run(["ps", "-eo", "comm"], capture_output=True, text=True)
+            apps = list(set(result.stdout.strip().split("\n")[1:]))[:15]
+            return "Processes: " + ", ".join(apps) + "."
+        except Exception as e:
+            return f"Couldn't list apps: {e}"
