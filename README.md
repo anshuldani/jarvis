@@ -37,13 +37,22 @@ python main.py
 - Anthropic API key
 - ElevenLabs API key (optional, falls back to edge-tts)
 
-## Voice Commands
-Just say anything after waking JARVIS. Examples:
-- "What time is it?"
-- "Open Spotify"
-- "What's the weather?"
-- "Set volume to 50"
-- "Take a screenshot"
+## Available tools
+
+| Tool | Example command |
+|---|---|
+| Open application | "Open Spotify" / "Launch VS Code" |
+| Web search | "Search for WWDC announcements" |
+| Run shell command | "Run git status" |
+| System info | "What's my CPU usage?" |
+| Weather | "What's the weather in Chicago?" |
+| Take screenshot | "Take a screenshot" |
+| Set volume | "Set volume to 60" |
+| Get current time | "What time is it?" |
+| Get current date | "What's the date?" |
+| Read clipboard | "What's in my clipboard?" |
+
+The LLM decides which tool to call based on intent — no special syntax required. Say it naturally.
 
 ## Stack
 
