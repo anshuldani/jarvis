@@ -4,6 +4,16 @@
 
 Always-on desktop AI assistant: say the wake phrase, speak your request, get a voice response. Runs in the system tray, pops up on wake word, uses ElevenLabs for high-quality British TTS with three local fallbacks, and has 10 OS-level tools — open apps, search the web, take screenshots, control volume, check weather.
 
+## Why this is hard
+
+Four things have to run simultaneously without blocking each other: Porcupine wake word detection (reading the microphone continuously), the PyQt UI event loop (must stay responsive), Whisper speech-to-text (blocks until transcription finishes), and the LLM + TTS pipeline (network call → audio generation → playback). On a single thread, any one of them freezes the others.
+
+The solution is three daemon threads: one for wake word detection, one for the LLM + tool loop, one for TTS streaming. All UI mutations go through Qt signals — no direct widget calls from background threads, which crash the app without a useful traceback.
+
+The TTS fallback chain (ElevenLabs → edge-tts → pyttsx3 → macOS `say`) means the assistant never goes silent — but each fallback has a different audio pipeline, different latency profile, and different voice characteristics, so the code has to handle them uniformly without leaking fallback-specific state.
+
+---
+
 ## Features
 - Voice activation via custom wake phrase ("wake up, daddy's home")
 - Whisper-powered speech-to-text
