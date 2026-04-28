@@ -90,7 +90,10 @@ tools/
   system_tools.py 10 OS tools: apps, web, files, system, weather
 ```
 
-## Wake Phrase
+## Wake phrase
+
 > *"Wake up, daddy's home"*
 
-Say this any time — JARVIS runs in the background and pops up automatically.
+JARVIS runs silently in the system tray. Say the wake phrase at any time — it pops up, confirms it's listening, and waits for your request. After responding it returns to the tray automatically.
+
+To change the wake phrase, swap the Porcupine keyword in `core/wake_word.py`. Custom keywords require a Porcupine account but built-in keywords (like "jarvis", "computer", "hey siri") are free.
