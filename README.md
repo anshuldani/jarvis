@@ -2,7 +2,7 @@
 
 > *"All systems nominal, Boss."*
 
-A desktop AI assistant inspired by Iron Man's JARVIS.
+Always-on desktop AI assistant: say the wake phrase, speak your request, get a voice response. Runs in the system tray, pops up on wake word, uses ElevenLabs for high-quality British TTS with three local fallbacks, and has 10 OS-level tools — open apps, search the web, take screenshots, control volume, check weather.
 
 ## Features
 - Voice activation via custom wake phrase ("wake up, daddy's home")
