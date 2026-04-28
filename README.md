@@ -45,12 +45,26 @@ Just say anything after waking JARVIS. Examples:
 - "Set volume to 50"
 - "Take a screenshot"
 
+## Stack
+
+| Component | Technology |
+|---|---|
+| LLM + personality | Anthropic API (tool use mode) |
+| Speech-to-text | OpenAI Whisper API |
+| Wake word | Porcupine (`pvporcupine`) |
+| TTS primary | ElevenLabs `eleven_turbo_v2_5` — British, low latency |
+| TTS fallback 1 | `edge-tts` with `en-GB-RyanNeural` |
+| TTS fallback 2 | `pyttsx3` (local, offline) |
+| TTS fallback 3 | macOS `say` / Linux `espeak` |
+| UI | PyQt5/6 (auto-detected), animated waveform |
+| System integration | System tray, always-on-top frameless window |
+
 ## Architecture
 
 ```
 main.py           Entry point — Qt app, wires all components
 core/
-  brain.py        Claude API integration, tool loop, JARVIS personality
+  brain.py        LLM API integration, tool loop, JARVIS personality
   audio_engine.py STT (Whisper) + TTS (ElevenLabs/edge-tts/pyttsx3)
   wake_word.py    Background listener for wake phrase
 ui/
@@ -58,12 +72,6 @@ ui/
 tools/
   system_tools.py 10 OS tools: apps, web, files, system, weather
 ```
-
-## Voice Engine
-- **Primary TTS**: ElevenLabs `eleven_turbo_v2_5` — deep, British, low latency
-- **Fallback 1**: `edge-tts` with `en-GB-RyanNeural`
-- **Fallback 2**: `pyttsx3` with system male voice
-- **Fallback 3**: macOS `say` / Linux `espeak`
 
 ## Wake Phrase
 > *"Wake up, daddy's home"*
