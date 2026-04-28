@@ -26,16 +26,24 @@ The TTS fallback chain (ElevenLabs → edge-tts → pyttsx3 → macOS `say`) mea
 ## Setup
 
 ```bash
-cp .env.example .env
-# Fill in your API keys
-bash setup.sh
+git clone https://github.com/anshuldani/jarvis
+cd jarvis
+bash setup.sh          # creates venv, installs dependencies
+cp .env.example .env   # then fill in your keys
 python main.py
 ```
 
-## Requirements
-- Python 3.10+
-- Anthropic API key
-- ElevenLabs API key (optional, falls back to edge-tts)
+Required env vars:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...           # for Whisper STT
+PORCUPINE_ACCESS_KEY=...        # for wake word detection
+ELEVENLABS_API_KEY=...          # optional — falls back to edge-tts if absent
+WEATHER_API_KEY=...             # optional — for weather tool (OpenWeatherMap)
+```
+
+**Requirements:** Python 3.10+, a microphone, PyQt5 or PyQt6 (auto-detected).
 
 ## Available tools
 
