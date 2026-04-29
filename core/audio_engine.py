@@ -88,8 +88,10 @@ class AudioEngine:
                 return model.transcribe(tmp)["text"].strip()
             return ""
         finally:
-            try: os.unlink(tmp)
-            except: pass
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
 
     def record_and_process(self):
         def _run():
