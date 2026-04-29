@@ -119,9 +119,7 @@ class WakeWordListener:
 
 
 # ── Wake word sensitivity config ──────────────────────────────────────────────
-import os as _os
-
-SENSITIVITY = float(_os.getenv("WAKE_WORD_SENSITIVITY", "0.5"))
+SENSITIVITY = float(os.getenv("WAKE_WORD_SENSITIVITY", "0.5"))
 """
 Sensitivity 0.0–1.0. Higher = more sensitive (more false positives).
 Default 0.5 is balanced for quiet home environments.
