@@ -86,12 +86,6 @@ class SystemTools:
         webbrowser.open(url)
         return f"Opened {url}, Boss."
 
-    def get_system_info(self, info_type: str) -> str:
-        raise NotImplementedError
-
-    def set_volume(self, level: int) -> str:
-        raise NotImplementedError
-
     def read_file(self, path: str) -> str:
         """Read file contents"""
         path = os.path.expanduser(path)
