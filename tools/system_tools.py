@@ -2,10 +2,14 @@
 System Tools - JARVIS's ability to interact with the OS
 """
 import os
+import re
 import subprocess
 import platform
 import datetime
 import json
+import urllib.request
+import urllib.parse
+import webbrowser
 from typing import Optional
 
 
@@ -59,7 +63,6 @@ class SystemTools:
 
     def web_search(self, query: str) -> str:
         """Search the web using DuckDuckGo JSON API"""
-        import urllib.request, urllib.parse
         try:
             url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&skip_disambig=1"
             req = urllib.request.Request(url, headers={"User-Agent": "JARVIS/2.0"})
@@ -82,7 +85,6 @@ class SystemTools:
         """Open URL in default browser"""
         if not url.startswith(("http://", "https://", "ftp://")):
             url = "https://" + url
-        import webbrowser
         webbrowser.open(url)
         return f"Opened {url}, Boss."
 
@@ -297,7 +299,6 @@ class SystemTools:
                 result = subprocess.run(
                     ["pmset", "-g", "batt"], capture_output=True, text=True
                 )
-                import re
                 match = re.search(r'(\d+)%', result.stdout)
                 if match:
                     pct = int(match.group(1))
