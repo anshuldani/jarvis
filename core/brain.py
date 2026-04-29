@@ -121,7 +121,7 @@ class JarvisBrain:
 
         while True:
             with self.client.messages.stream(
-                model="claude-sonnet-4-20250514",
+                model="claude-sonnet-4-6",
                 max_tokens=512,
                 system=JARVIS_SYSTEM_PROMPT,
                 tools=self.tools,
